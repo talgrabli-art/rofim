@@ -20,10 +20,10 @@ build_data.py — בונה את data.json שהאתר (מאגר רופאים בה
 import argparse, csv, json, re, sys
 from datetime import datetime
 
-SANITY = {"מנורה": (1500, 6000), "כלל": (1000, 4000), "איילון": (800, 3000)}
+SANITY = {"מנורה": (1500, 6000), "כלל": (1000, 4000), "איילון": (800, 3000), "פניקס": (800, 3000)}
 
 TITLE_MAP = {
-    "דר": "ד\"ר", "ד\"ר": "ד\"ר", "ד״ר": "ד\"ר", "דוקטור": "ד\"ר",
+    "דר": "ד\"ר", "דר'": "ד\"ר", "ד\"ר": "ד\"ר", "ד״ר": "ד\"ר", "דוקטור": "ד\"ר",
     "פרופ": "פרופ'", "פרופ'": "פרופ'", "פרופ׳": "פרופ'", "פרופסור": "פרופ'",
     "מר": "מר", "גב": "גב", "גב'": "גב", "גברת": "גב",
 }
@@ -159,6 +159,36 @@ def parse_ayalon(csv_path):
     return recs
 
 
+def parse_phoenix(csv_path):
+    """פניקס: UTF-8, 14 עמודות. שם מלא בשדה אחד, 2 זוגות תאריכים, sub מופרד ב-';', 3 ערים, ללא בית חולים."""
+    recs = []
+    with open(csv_path, "r", encoding="utf-8-sig", newline="") as f:
+        reader = csv.reader(f); next(reader, None)
+        for n, row in enumerate(reader):
+            if not row or len(row) < 14:
+                continue
+            (name, lic, title, spec, sub, start1, end1, start2, end2,
+             surg3, surg1, c1, c2, c3) = [c.strip() for c in row[:14]]
+            # שני טווחי התקשרות אפשריים — אם יש טווח פתוח (בלי תאריך סיום) הרופא פעיל
+            ranges = [(start1, end1), (start2, end2)]
+            starts = [s for s, e in ranges if s]
+            ends = [e for s, e in ranges if e]
+            has_open = any(s and not e for s, e in ranges)
+            start = starts[0] if starts else ""
+            end = "" if has_open else (ends[-1] if ends else "")
+            sub_clean = ", ".join([p.strip() for p in sub.split(";") if p.strip()])
+            recs.append({
+                "id": "phoenix_" + str(n), "company": "פניקס",
+                "name": name or "—", "lic": lic,
+                "title": norm_title(title), "specialty": spec, "sub": sub_clean,
+                "s3": yn(surg3), "s1": yn(surg1),
+                "cities": [c for c in (c1, c2, c3) if c], "hospital": "",
+                "start": start, "end": end, "expired": is_expired(end),
+                "lkey": re.sub(r"\D", "", lic),
+            })
+    return recs
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--html", required=True)
@@ -166,6 +196,7 @@ def main():
     ap.add_argument("--menora")
     ap.add_argument("--clal")
     ap.add_argument("--ayalon")
+    ap.add_argument("--phoenix")
     args = ap.parse_args()
 
     fresh, provided = [], set()
@@ -173,6 +204,7 @@ def main():
         ("מנורה", args.menora, parse_menora),
         ("כלל", args.clal, parse_clal),
         ("איילון", args.ayalon, parse_ayalon),
+        ("פניקס", args.phoenix, parse_phoenix),
     ):
         if not path:
             continue
