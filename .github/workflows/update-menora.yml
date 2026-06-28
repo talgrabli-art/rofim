@@ -1,4 +1,4 @@
-name: עדכון מאגר רופאים - מנורה + כלל
+name: עדכון מאגר רופאים - מנורה + כלל + איילון
 
 # רץ אוטומטית כל יום ראשון ב-05:00 UTC (~08:00 בישראל), וגם ניתן להריץ ידנית מהכפתור
 on:
@@ -35,8 +35,17 @@ jobs:
             -o clal.csv
           echo "כלל — גודל:"; wc -c clal.csv
 
+      - name: הורדת ה-CSV מאיילון
+        run: |
+          curl -fsSL -H 'User-Agent: Mozilla/5.0' \
+            "https://www.ayalon-ins.co.il/mediastorage/media/k43nn0gv/ayalon_doc_may_2026.csv" \
+            -o ayalon.csv
+          echo "איילון — גודל:"; wc -c ayalon.csv
+
       - name: בניית data.json
-        run: python build_data.py --html index.html --out data.json --menora menora.csv --clal clal.csv
+        run: |
+          python build_data.py --html index.html --out data.json \
+            --menora menora.csv --clal clal.csv --ayalon ayalon.csv
 
       - name: דחיפת העדכון (רק אם השתנה)
         run: |
@@ -44,7 +53,7 @@ jobs:
             git config user.name  "doctors-update-bot"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git add data.json
-            git commit -m "עדכון אוטומטי - מנורה + כלל ($(date +%F))"
+            git commit -m "עדכון אוטומטי - מנורה + כלל + איילון ($(date +%F))"
             git push
             echo "✓ data.json עודכן ונדחף."
           else
