@@ -1,4 +1,4 @@
-name: עדכון מאגר רופאים - מנורה + כלל + איילון
+name: עדכון מאגר רופאים - מנורה + כלל + איילון + פניקס
 
 # רץ אוטומטית כל יום ראשון ב-05:00 UTC (~08:00 בישראל), וגם ניתן להריץ ידנית מהכפתור
 on:
@@ -42,10 +42,12 @@ jobs:
             -o ayalon.csv
           echo "איילון — גודל:"; wc -c ayalon.csv
 
+      # פניקס: נקרא מקובץ קבוע בריפו (phoenix.csv) כי האתר חוסם הורדה אוטומטית.
+      # לעדכון פניקס — מחליפים את phoenix.csv בריפו ומריצים את ה-workflow.
       - name: בניית data.json
         run: |
           python build_data.py --html index.html --out data.json \
-            --menora menora.csv --clal clal.csv --ayalon ayalon.csv
+            --menora menora.csv --clal clal.csv --ayalon ayalon.csv --phoenix phoenix.csv
 
       - name: דחיפת העדכון (רק אם השתנה)
         run: |
@@ -53,7 +55,7 @@ jobs:
             git config user.name  "doctors-update-bot"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git add data.json
-            git commit -m "עדכון אוטומטי - מנורה + כלל + איילון ($(date +%F))"
+            git commit -m "עדכון אוטומטי - מנורה + כלל + איילון + פניקס ($(date +%F))"
             git push
             echo "✓ data.json עודכן ונדחף."
           else
