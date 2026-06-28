@@ -20,7 +20,7 @@ build_data.py — בונה את data.json שהאתר (מאגר רופאים בה
 import argparse, csv, json, re, sys
 from datetime import datetime
 
-SANITY = {"מנורה": (1500, 6000), "כלל": (1000, 4000), "איילון": (800, 3000), "פניקס": (800, 3000)}
+SANITY = {"מנורה": (1500, 6000), "כלל": (1000, 4000), "איילון": (800, 3000), "פניקס": (800, 3000), "הראל": (800, 3000)}
 
 TITLE_MAP = {
     "דר": "ד\"ר", "דר'": "ד\"ר", "ד\"ר": "ד\"ר", "ד״ר": "ד\"ר", "דוקטור": "ד\"ר",
@@ -189,6 +189,39 @@ def parse_phoenix(csv_path):
     return recs
 
 
+def parse_harel(xlsx_path):
+    """הראל: קובץ Excel (xlsx), 18 עמודות, עם עמודת 'רופא פעיל' מפורשת (כן/לא)."""
+    import openpyxl  # נדרש רק אם משתמשים ב-Harel
+    wb = openpyxl.load_workbook(xlsx_path, read_only=True, data_only=True)
+    ws = wb[wb.sheetnames[0]]
+    rows = ws.iter_rows(values_only=True)
+    next(rows, None)  # שורת כותרות
+    recs = []
+    for n, row in enumerate(rows):
+        if not row or len(row) < 17 or not (row[0] or row[1]):
+            continue
+
+        def g(i):
+            v = row[i] if i < len(row) else None
+            return "" if v is None else str(v).strip()
+
+        lic = g(2)
+        sub = ", ".join([p.strip() for p in (g(5) + " ; " + g(6)).split(";") if p.strip()])
+        created = row[15] if len(row) > 15 else None
+        start = created.strftime("%d/%m/%Y") if hasattr(created, "strftime") else g(15)
+        recs.append({
+            "id": "harel_" + str(n), "company": "הראל",
+            "name": (g(0) + " " + g(1)).strip() or "—", "lic": lic,
+            "title": norm_title(g(3)), "specialty": g(4), "sub": sub,
+            "s3": yn(g(8)), "s1": yn(g(7)),
+            "cities": [g(9)] if g(9) else [], "hospital": "",
+            "start": start, "end": "",
+            "expired": (g(16) != "כן"),   # 'רופא פעיל' = כן/לא
+            "lkey": re.sub(r"\D", "", lic),
+        })
+    return recs
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--html", required=True)
@@ -197,6 +230,7 @@ def main():
     ap.add_argument("--clal")
     ap.add_argument("--ayalon")
     ap.add_argument("--phoenix")
+    ap.add_argument("--harel")
     args = ap.parse_args()
 
     fresh, provided = [], set()
@@ -205,6 +239,7 @@ def main():
         ("כלל", args.clal, parse_clal),
         ("איילון", args.ayalon, parse_ayalon),
         ("פניקס", args.phoenix, parse_phoenix),
+        ("הראל", args.harel, parse_harel),
     ):
         if not path:
             continue

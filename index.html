@@ -15,7 +15,7 @@
   --line:#E3E8EF; --line-2:#CFD7E2;
   --btn:#1E293B; --btn-hover:#0B1320;
   --focus:#2D7FF9; --danger:#B42318; --ok:#157347;
-  --c-ayalon:#2563EB; --c-clal:#0D9488; --c-migdal:#DC2626; --c-menora:#16A34A; --c-phoenix:#EA580C;
+  --c-ayalon:#2563EB; --c-clal:#0D9488; --c-migdal:#DC2626; --c-menora:#16A34A; --c-phoenix:#EA580C;--c-harel:#7C3AED;
   --r:10px; --r-sm:7px; --r-lg:16px;
   --sh-1:0 1px 2px rgba(16,27,45,.06),0 1px 3px rgba(16,27,45,.05);
   --sh-2:0 4px 12px rgba(16,27,45,.08),0 2px 4px rgba(16,27,45,.06);
@@ -394,7 +394,7 @@ input{font-family:inherit}
    לכל רשומה יש מזהה יציב (d.id) ולכל רופא מאוחד מפתח (g.key) — נקודות העיגון ל‑CRM.
    ========================================================================== */
 
-const INS_KEY = {"איילון":"ayalon","כלל":"clal","מגדל":"migdal","מנורה":"menora","פניקס":"phoenix"};
+const INS_KEY = {"איילון":"ayalon","כלל":"clal","מגדל":"migdal","מנורה":"menora","פניקס":"phoenix","הראל":"harel"};
 const cc = c => `var(--c-${INS_KEY[c]||'clal'})`;
 
 const DataSource = {
