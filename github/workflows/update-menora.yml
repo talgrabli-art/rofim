@@ -1,0 +1,46 @@
+name: עדכון מאגר רופאים - מנורה
+
+# רץ אוטומטית כל יום ראשון ב-05:00 UTC (~08:00 בישראל), וגם ניתן להריץ ידנית מהכפתור
+on:
+  schedule:
+    - cron: '0 5 * * 0'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: שליפת הריפו
+        uses: actions/checkout@v4
+
+      - name: התקנת Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: הורדת ה-CSV ממנורה
+        run: |
+          curl -fsSL \
+            -H 'User-Agent: Mozilla/5.0' \
+            "https://www.menoramivt.co.il/doctors-search/api/v1/get-file-data/" \
+            -o menora.csv
+          echo "גודל הקובץ שהורד:"; wc -c menora.csv
+
+      - name: בניית data.json
+        run: python build_data.py --menora menora.csv --html index.html --out data.json
+
+      - name: דחיפת העדכון (רק אם השתנה)
+        run: |
+          if ! git diff --quiet -- data.json; then
+            git config user.name  "menora-update-bot"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add data.json
+            git commit -m "עדכון אוטומטי - רופאי מנורה ($(date +%F))"
+            git push
+            echo "✓ data.json עודכן ונדחף."
+          else
+            echo "אין שינויים השבוע."
+          fi
