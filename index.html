@@ -399,7 +399,14 @@ const cc = c => `var(--c-${INS_KEY[c]||'clal'})`;
 
 const DataSource = {
   async load(){
-    // === נקודת חיבור CRM — ראו הערה למעלה ===
+    // מקור ראשי: data.json (מתעדכן אוטומטית). נפילה חזרה ל-PAYLOAD המוטמע אם לא זמין.
+    try{
+      const res = await fetch('./data.json', {cache:'no-store'});
+      if(res.ok){
+        const d = await res.json();
+        if(Array.isArray(d) && d.length) return d;
+      }
+    }catch(e){ /* אם הקובץ חסר/שבור — משתמשים בתמונה המוטמעת */ }
     return decode(PAYLOAD);
   }
 };
