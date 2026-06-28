@@ -1,4 +1,4 @@
-name: עדכון מאגר רופאים - מנורה + כלל + איילון + הראל + פניקס
+name: עדכון מאגר רופאים - מנורה + כלל + הראל (אוטומטי) + איילון + פניקס (קבצים)
 
 # רץ אוטומטית כל יום ראשון ב-05:00 UTC (~08:00 בישראל), וגם ניתן להריץ ידנית מהכפתור
 on:
@@ -38,13 +38,6 @@ jobs:
             -o clal.csv
           echo "כלל — גודל:"; wc -c clal.csv
 
-      - name: הורדת ה-CSV מאיילון
-        run: |
-          curl -fsSL -H 'User-Agent: Mozilla/5.0' \
-            "https://www.ayalon-ins.co.il/mediastorage/media/k43nn0gv/ayalon_doc_may_2026.csv" \
-            -o ayalon.csv
-          echo "איילון — גודל:"; wc -c ayalon.csv
-
       - name: הורדת האקסל מהראל
         run: |
           curl -fsSL -H 'User-Agent: Mozilla/5.0' \
@@ -52,13 +45,14 @@ jobs:
             -o harel.xlsx
           echo "הראל — גודל:"; wc -c harel.xlsx
 
-      # פניקס: נקרא מקובץ קבוע בריפו (phoenix.csv) כי האתר חוסם הורדה אוטומטית.
-      # לעדכון פניקס — מחליפים את phoenix.csv בריפו ומריצים את ה-workflow.
+      # איילון + פניקס: נקראים מקבצים קבועים בריפו (ayalon.csv, phoenix.csv) כי
+      # האתרים שלהם חוסמים הורדה אוטומטית (403 / חומת אש).
+      # לעדכון — מחליפים את הקובץ המתאים בריפו ומריצים את ה-workflow.
       - name: בניית data.json
         run: |
           python build_data.py --html index.html --out data.json \
-            --menora menora.csv --clal clal.csv --ayalon ayalon.csv \
-            --harel harel.xlsx --phoenix phoenix.csv
+            --menora menora.csv --clal clal.csv --harel harel.xlsx \
+            --ayalon ayalon.csv --phoenix phoenix.csv
 
       - name: דחיפת העדכון (רק אם השתנה)
         run: |
