@@ -675,7 +675,7 @@ function makeCombo(host,opts,placeholder,onChange){
         </div>
       </div>`;
     const btn=$(".combo-btn",host);
-    btn.onclick=e=>{if(e.target.closest(".clr")){value="";onChange("");draw();return;}open=!open;filter="";draw();
+    btn.onclick=e=>{e.stopPropagation();if(e.target.closest(".clr")){value="";onChange("");draw();return;}open=!open;filter="";draw();
       if(open){const si=$(".combo-search input",host);si&&si.focus();}};
     const si=$(".combo-search input",host);
     if(si){si.oninput=()=>{filter=si.value;draw();$(".combo-search input",host).focus();};
