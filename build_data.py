@@ -4,23 +4,23 @@
 build_data.py — בונה את data.json שהאתר (מאגר רופאים בהסדר) קורא ממנו.
 
 מקורות:
-  • מנורה — CSV ציבורי מאתר מנורה (UTF-8).
-  • כלל   — CSV ציבורי מאתר כלל (Windows-1255).
-  • שאר החברות (מגדל/פניקס/איילון) — מתוך ה-PAYLOAD המוטמע ב-index.html
-    (תמונת מצב "קפואה" עד שנחבר להן מקור עדכון משלהן).
+  • מנורה — CSV ציבורי (UTF-8, 14 עמודות).
+  • כלל   — CSV ציבורי (Windows-1255, 13 עמודות).
+  • איילון — CSV ציבורי (UTF-8, 15 עמודות, כולל בית חולים).
+  • שאר החברות (מגדל/פניקס) — מתוך ה-PAYLOAD המוטמע ב-index.html (קפוא).
 
 הרצה:
-  python build_data.py --html index.html --out data.json [--menora menora.csv] [--clal clal.csv]
+  python build_data.py --html index.html --out data.json \
+      [--menora menora.csv] [--clal clal.csv] [--ayalon ayalon.csv]
 
-בדיקות שפיות: אם מספר רשומות של חברה יוצא מחוץ לטווח הצפוי, הסקריפט נכשל
-(exit 1) ולא דורס את data.json — כדי שקובץ שבור/ריק לא ימחק את הרשימה.
+בדיקות שפיות: אם מספר רשומות של חברה יוצא מחוץ לטווח הצפוי — הסקריפט נכשל
+(exit 1) ולא דורס את data.json.
 """
 
 import argparse, csv, json, re, sys
 from datetime import datetime
 
-# טווחי שפיות לכל חברה (הגנה מפני קובץ שבור)
-SANITY = {"מנורה": (1500, 6000), "כלל": (1000, 4000)}
+SANITY = {"מנורה": (1500, 6000), "כלל": (1000, 4000), "איילון": (800, 3000)}
 
 TITLE_MAP = {
     "דר": "ד\"ר", "ד\"ר": "ד\"ר", "ד״ר": "ד\"ר", "דוקטור": "ד\"ר",
@@ -35,7 +35,8 @@ def norm_title(t):
 
 
 def yn(v):
-    return 1 if str(v).strip() == "כן" else 0
+    # מנורה/כלל: כן/לא  |  איילון: כ/ל
+    return 1 if str(v).strip() in ("כן", "כ") else 0
 
 
 def is_expired(end):
@@ -92,7 +93,7 @@ def decode_payload(p):
 
 
 def parse_menora(csv_path):
-    """מנורה: UTF-8, 14 עמודות, עד 4 ערים, התמחות נוספת אחת."""
+    """מנורה: UTF-8, 14 עמודות, עד 4 ערים, התמחות נוספת אחת, ללא בית חולים."""
     recs = []
     with open(csv_path, "r", encoding="utf-8-sig", newline="") as f:
         reader = csv.reader(f); next(reader, None)
@@ -114,7 +115,7 @@ def parse_menora(csv_path):
 
 
 def parse_clal(csv_path):
-    """כלל: Windows-1255, 13 עמודות, 2 ערים, 2 עמודות התמחות נוספת."""
+    """כלל: Windows-1255, 13 עמודות, 2 ערים, 2 עמודות התמחות נוספת, ללא בית חולים."""
     recs = []
     with open(csv_path, "r", encoding="cp1255", newline="") as f:
         reader = csv.reader(f); next(reader, None)
@@ -136,18 +137,42 @@ def parse_clal(csv_path):
     return recs
 
 
+def parse_ayalon(csv_path):
+    """איילון: UTF-8, 15 עמודות, 4 ערים, כולל בית חולים. ניתוחים=כ/ל, סדר הפוך (s1 לפני s3)."""
+    recs = []
+    with open(csv_path, "r", encoding="utf-8-sig", newline="") as f:
+        reader = csv.reader(f); next(reader, None)
+        for n, row in enumerate(reader):
+            if not row or len(row) < 15:
+                continue
+            (first, last, lic, title, spec, sub,
+             c1, c2, c3, c4, hosp, s1, s3, start, end) = [c.strip() for c in row[:15]]
+            recs.append({
+                "id": "ayalon_" + str(n), "company": "איילון",
+                "name": (first + " " + last).strip() or "—", "lic": lic,
+                "title": norm_title(title), "specialty": spec, "sub": sub,
+                "s3": yn(s3), "s1": yn(s1),
+                "cities": [c for c in (c1, c2, c3, c4) if c], "hospital": hosp,
+                "start": start, "end": end, "expired": is_expired(end),
+                "lkey": re.sub(r"\D", "", lic),
+            })
+    return recs
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--html", required=True)
     ap.add_argument("--out", required=True)
     ap.add_argument("--menora")
     ap.add_argument("--clal")
+    ap.add_argument("--ayalon")
     args = ap.parse_args()
 
     fresh, provided = [], set()
     for company, path, parser in (
         ("מנורה", args.menora, parse_menora),
         ("כלל", args.clal, parse_clal),
+        ("איילון", args.ayalon, parse_ayalon),
     ):
         if not path:
             continue
