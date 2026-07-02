@@ -678,7 +678,7 @@ function makeCombo(host,opts,placeholder,onChange){
     btn.onclick=e=>{e.stopPropagation();if(e.target.closest(".clr")){value="";onChange("");draw();return;}open=!open;filter="";draw();
       if(open){const si=$(".combo-search input",host);si&&si.focus();}};
     const si=$(".combo-search input",host);
-    if(si){si.oninput=()=>{filter=si.value;draw();$(".combo-search input",host).focus();};
+    if(si){si.oninput=()=>{filter=si.value;const fo=filter?opts.filter(o=>o.v.toLowerCase().includes(filter.toLowerCase())):opts;const lst=$(".combo-list",host);if(lst){lst.innerHTML=fo.length?fo.map(o=>`<div class="combo-opt ${o.v===value?'sel':''}" data-v="${esc(o.v)}"><span class="on-spec">${esc(o.v)}</span><span class="cnt">${fmt(o.n)}</span></div>`).join(""):'<div class="combo-empty">אין תוצאות</div>';$$(".combo-opt",host).forEach(o=>o.onclick=()=>{value=o.dataset.v;onChange(value);close();});}};
       si.onclick=e=>e.stopPropagation();}
     $$(".combo-opt",host).forEach(o=>o.onclick=()=>{value=o.dataset.v;onChange(value);close();});
   }
